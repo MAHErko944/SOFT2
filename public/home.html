@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text Analyzer</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .page-title {
+      text-align: center;
+      margin: 20px 0;
+      color: #333;
+    }
+    
+    .logout-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+    
+    .logout-btn {
+      background-color: #f44336;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 16px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="text-analyzer-container">
+    <h2>Text Analyzer</h2>
+    <textarea id="textInput" rows="6" placeholder="Enter your text here..."></textarea>
+    <button id="analyzeButton">Analyze</button>
+    <div id="result" class="result">
+      <!-- Results will be displayed here -->
+    </div>
+    
+    <!-- Logout button placed after results -->
+    <div class="logout-container">
+      <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+  </div>
+
+  <script>
+    // Toggle between client-side and server-side analysis
+    const useServerAnalysis = true; // Set to true to use server-side analysis
+    
+    function analyzeTextClientSide(input) {
+      if (typeof input !== 'string') throw new Error('Input must be a string');
+    
+      const trimmed = input.trim();
+      const isEmpty = trimmed.length === 0;
+    
+      return {
+        characterCount: trimmed.length,
+        wordCount: isEmpty ? 0 : trimmed.split(/\s+/).length,
+        hasNumbers: /\d/.test(trimmed),
+        isEmpty,
+        words: trimmed ? trimmed.split(/\s+/) : [],
+        sentenceCount: isEmpty ? 0 : (trimmed.match(/[.!?]+/g) || []).length,
+        paragraphCount: isEmpty ? 0 : (trimmed.split(/\n\s*\n/).filter(p => p.trim()).length || 1),
+        numbers: (trimmed.match(/\d+/g) || [])
+      };
+    }
+
+    async function analyzeTextServerSide(text) {
+      try {
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Analysis failed');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Error:', error);
+        throw error;
+      }
+    }
+
+    function displayResults(result) {
+      document.getElementById('result').innerHTML = `
+        <div class="analysis-results">
+          <p><span class="key">Character Count:</span> <span class="value">${result.characterCount}</span></p>
+          <p><span class="key">Word Count:</span> <span class="value">${result.wordCount}</span></p>
+          <p><span class="key">Sentence Count:</span> <span class="value">${result.sentenceCount || 0}</span></p>
+          <p><span class="key">Paragraph Count:</span> <span class="value">${result.paragraphCount || 0}</span></p>
+          <p><span class="key">Contains Numbers:</span> <span class="value">${result.hasNumbers}</span></p>
+          ${result.numbers && result.numbers.length ? 
+            `<p><span class="key">Numbers Found:</span> <span class="value">${result.numbers.join(', ')}</span></p>` : ''}
+          <p><span class="key">Words:</span> <span class="value word-list">${result.words.join(', ')}</span></p>
+        </div>
+      `;
+    }
+
+    document.getElementById('analyzeButton').addEventListener('click', async function() {
+      const input = document.getElementById('textInput').value;
+      
+      try {
+        // Show loading indicator
+        document.getElementById('result').innerHTML = '<p>Analyzing...</p>';
+        
+        let result;
+        if (useServerAnalysis) {
+          // Server-side analysis
+          result = await analyzeTextServerSide(input);
+        } else {
+          // Client-side analysis
+          result = analyzeTextClientSide(input);
+        }
+        
+        displayResults(result);
+      } catch (error) {
+        document.getElementById('result').innerHTML = `
+          <p style="color: red;">Error: ${error.message}</p>
+          ${!useServerAnalysis ? '' : '<p>Make sure you are logged in. Try refreshing the page.</p>'}
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
