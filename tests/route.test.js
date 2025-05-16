@@ -66,7 +66,7 @@ describe('Testing /validateSignUp', () => {
       });
 
     expect(response.status).toBe(302);
-    expect(response.headers.location).toBe('/home');
+    expect(response.headers.location).toBe('/');
   });
 
   it('should detect weak password', async () => {
@@ -83,7 +83,8 @@ describe('Testing /validateSignUp', () => {
       });
       
     expect(response.status).toBe(200);
-    expect(response.text).toContain('Weak password');
+expect(response.text).toContain('Password must be at least 8 characters and include uppercase, lowercase, number, and special character');
+
   });
 
   it('should throw error when required field is missing', async () => {

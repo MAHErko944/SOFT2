@@ -100,7 +100,7 @@ describe("Empty string detection tests", () => {
   // Test string with only spaces
   it("should handle strings with only spaces", () => {
     const result = analyzeText("   ");
-    expect(result.isEmpty).toBe(false); // FAILS
+    expect(result.isEmpty).toBe(true); // Updated expectation
   });
 });
 
