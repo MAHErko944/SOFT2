@@ -11,6 +11,7 @@ const bcrypt = require('bcrypt');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const csrf = require('csurf');
+const sanitizeHtml = require('sanitize-html');
 
 require("dotenv").config();
 
@@ -157,15 +158,18 @@ app.post('/validateSignUp', async (req, res) => {
             return res.send(`<script>alert('Email already exists'); window.location.href = '/sign';</script>`);
         }
         
-        // Create new user (password will be hashed by the pre-save middleware)
-        const newUser = await userModel.create({
+        // Sanitize input fields to prevent XSS
+        const sanitizedUser = {
             email: user.email,
             password: user.password,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            phone_number: user.phone_number,
+            first_name: sanitizeHtml(user.first_name, { allowedTags: [], allowedAttributes: {} }),
+            last_name: sanitizeHtml(user.last_name, { allowedTags: [], allowedAttributes: {} }),
+            phone_number: sanitizeHtml(user.phone_number, { allowedTags: [], allowedAttributes: {} }),
             gender: user.gender
-        });
+        };
+        
+        // Create new user (password will be hashed by the pre-save middleware)
+        const newUser = await userModel.create(sanitizedUser);
 
         if (newUser) {
             // Store a success message in the session that can be displayed on the login page
@@ -182,7 +186,7 @@ app.post('/validateSignUp', async (req, res) => {
     } catch (err) {
         console.error('Signup error:', err);
         const escapedMessage = String(err.message).replace(/'/g, "\\'");
-        return res.send(`<script>alert('Error: ${escapedMessage}'); window.location.href = '/sign';</script>`);
+        return res.status(400).send(`Error: ${err.message}`);
     }
 });
 
